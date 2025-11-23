@@ -1,90 +1,26 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { GameHUD } from '../../components/game/GameHUD';
-import { QuestionCard, QuestionData } from '../../components/game/QuestionCard';
-import { TimerBar } from '../../components/game/TimerBar';
-import { Button } from '../../components/global/Button';
-import { TopPlayersSidebar } from '../../components/game/TopPlayersSidebar';
-import { useGameStore } from '../../lib/store/gameStore';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
 
-const sampleQuestion: QuestionData = {
-  id: '1',
-  question_text: 'Which artist is known for painting the ceiling of the Sistine Chapel?',
-  options: ['Leonardo da Vinci', 'Michelangelo', 'Raphael', 'Donatello'],
-  correct_answer_index: 1
-};
-
-export default function GamePage() {
-  const [question, setQuestion] = useState<QuestionData>(sampleQuestion);
-  const [selected, setSelected] = useState<number | undefined>();
-  const [revealed, setRevealed] = useState(false);
-  const [progress, setProgress] = useState(1);
-  const { username, score, streak, correctCount, applyResult } = useGameStore();
-
-  useEffect(() => {
-    let frame: number;
-    const start = performance.now();
-    const duration = 15000;
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const p = Math.max(0, 1 - elapsed / duration);
-      setProgress(p);
-      if (p > 0 && !revealed) {
-        frame = requestAnimationFrame(tick);
-      }
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [question, revealed]);
-
-  const handleSelect = (idx: number) => {
-    setSelected(idx);
-  };
-
-  const handleReveal = () => {
-    if (selected === undefined) return;
-    const isCorrect = selected === question.correct_answer_index;
-    setRevealed(true);
-    applyResult(isCorrect);
-  };
-
-  const handleNext = () => {
-    setRevealed(false);
-    setSelected(undefined);
-    setProgress(1);
-    setQuestion({ ...sampleQuestion, id: crypto.randomUUID() });
-  };
-
-  return (
-    <main className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-6 py-10">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <div className="flex-1 space-y-6">
-          <GameHUD username={username} score={score} streak={streak} correctCount={correctCount} />
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-white/60">Time Remaining</span>
-              <span className="text-sm font-semibold text-accent2">{Math.round(progress * 15)}s</span>
-            </div>
-            <TimerBar progress={progress} />
-          </div>
-          <QuestionCard
-            question={question}
-            selectedIndex={selected}
-            revealed={revealed}
-            onSelect={handleSelect}
-          />
-          <div className="flex justify-center">
-            <Button
-              className="px-8"
-              onClick={revealed ? handleNext : handleReveal}
-              disabled={selected === undefined}
-            >
-              {revealed ? 'Next Question' : 'Submit Answer'}
-            </Button>
-          </div>
-        </div>
-        <TopPlayersSidebar />
+// Disable SSR completely for the game page to prevent hydration issues
+const GamePageContent = dynamic(() => import('./GamePageContent'), {
+  ssr: false,
+  loading: () => (
+    <main className="relative mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-6 px-6 py-6 overflow-hidden">
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-background to-purple-800/10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-accent/5 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2" />
+      </div>
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-accent" />
+        <p className="text-white/80 text-lg font-medium">Loading game...</p>
       </div>
     </main>
-  );
+  ),
+});
+
+export default function GamePage() {
+  return <GamePageContent />;
 }

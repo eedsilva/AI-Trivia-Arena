@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { FormCard } from '../../components/FormCard';
-import { Input } from '../../components/global/Input';
-import { PrimaryButton } from '../../components/PrimaryButton';
+import { FormCard } from '../../components/ui/FormCard';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
@@ -26,9 +26,13 @@ export default function ProfilePage() {
             value={social}
             onChange={(e) => setSocial(e.target.value)}
           />
-          <PrimaryButton onClick={() => router.push('/settings')} disabled={!name.trim()}>
+          <Button
+            variant="primary"
+            onClick={() => router.push('/settings')}
+            disabled={!name.trim()}
+          >
             Continue
-          </PrimaryButton>
+          </Button>
         </div>
       </FormCard>
     </main>

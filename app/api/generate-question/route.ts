@@ -1,42 +1,42 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { saveQuestion } from '../../../lib/supabaseClient';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getAvailableProvider } from '../../../lib/game/questionProvider';
+import {
+  generateAndSaveQuestionOpenAI,
+  generateAndSaveQuestionOpenRouter,
+} from '../../../lib/integrations';
 
 export async function POST(req: Request) {
-  const { difficulty } = await req.json();
-  const difficultyLabel = (difficulty ?? 'easy').toLowerCase();
+  try {
+    const { difficulty, excludeQuestionIds = [] } = await req.json();
+    const difficultyLabel = (difficulty ?? 'easy').toLowerCase();
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: 'Generate a multiple choice trivia question with four options. Return JSON with question, options array, correct index.'
-      },
-      {
-        role: 'user',
-        content: `Difficulty: ${difficultyLabel}`
-      }
-    ],
-    response_format: { type: 'json_object' }
-  });
+    console.log('🎲 Generating question with difficulty:', difficultyLabel);
+    if (excludeQuestionIds.length > 0) {
+      console.log('🚫 Excluding', excludeQuestionIds.length, 'previously asked questions');
+    }
 
-  const content = completion.choices[0]?.message?.content;
-  const parsed = content ? JSON.parse(content) : null;
+    // Get the configured provider (respects QUESTION_PROVIDER env)
+    const provider = getAvailableProvider();
 
-  const question = await saveQuestion({
-    question_text: parsed?.question ?? 'Who painted the Mona Lisa?',
-    options: parsed?.options ?? ['Leonardo da Vinci', 'Michelangelo', 'Raphael', 'Donatello'],
-    correct_answer_index: parsed?.correct_answer_index ?? 0,
-    difficulty: difficultyLabel
-  });
+    // Generate question using the configured provider
+    // Note: Currently we generate fresh questions each time, so duplicates are unlikely
+    // The excludeQuestionIds tracking is primarily client-side to prevent showing the same question twice
+    let question;
+    if (provider === 'openrouter') {
+      question = await generateAndSaveQuestionOpenRouter(difficultyLabel);
+    } else {
+      question = await generateAndSaveQuestionOpenAI(difficultyLabel);
+    }
 
-  return NextResponse.json({
-    id: question.id,
-    question_text: question.question_text,
-    options: question.options,
-    correct_answer_index: question.correct_answer_index
-  });
+    return NextResponse.json({
+      id: question.id,
+      question_text: question.question_text,
+      options: question.options,
+      correct_answer_index: question.correct_answer_index,
+      explanation: question.explanation,
+    });
+  } catch (error) {
+    console.error('Error generating question:', error);
+    return NextResponse.json({ error: 'Failed to generate question' }, { status: 500 });
+  }
 }

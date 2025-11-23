@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { incrementScore, supabaseServer } from '../../../lib/supabaseClient';
+import { incrementScore } from '../../../lib/supabase/helpers';
+import { supabaseServer } from '../../../lib/supabase/server';
 
 export async function POST(req: Request) {
   const { user_id, question_id, selected_index } = await req.json();
 
-  const { data: question, error } = await supabaseServer
+  const { data: question, error } = await supabaseServer()
     .from('questions')
     .select('correct_answer_index, explanation')
     .eq('id', question_id)
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   let newScore = 0;
   let newStreak = 0;
 
-  const { data: existingSession } = await supabaseServer
+  const { data: existingSession } = await supabaseServer()
     .from('game_sessions')
     .select('score, streak')
     .eq('user_id', user_id)
@@ -32,12 +33,12 @@ export async function POST(req: Request) {
     newStreak = 0;
   }
 
-  await supabaseServer
+  await supabaseServer()
     .from('game_sessions')
     .upsert({ user_id, streak: newStreak })
     .eq('user_id', user_id);
 
-  const { data: session } = await supabaseServer
+  const { data: session } = await supabaseServer()
     .from('game_sessions')
     .select('score, streak')
     .eq('user_id', user_id)
@@ -51,6 +52,6 @@ export async function POST(req: Request) {
     correct_answer_index: question.correct_answer_index,
     explanation: question.explanation ?? 'Great work!',
     new_score: newScore,
-    streak: newStreak
+    streak: newStreak,
   });
 }
