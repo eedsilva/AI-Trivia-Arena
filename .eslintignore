@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Generated files
+next-env.d.ts
+
+# Config files
+*.config.js
+*.config.mjs
+*.config.ts
+postcss.config.js
+tailwind.config.ts
+
+# Supabase scripts
+supabase_scripts/

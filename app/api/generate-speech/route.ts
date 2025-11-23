@@ -1,26 +1,22 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { supabaseServer } from '../../../lib/supabaseClient';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { generateSpeech } from '../../../lib/integrations/deepgram/tts';
 
 export async function POST(req: Request) {
-  const { text, voice } = await req.json();
-  const speech = await openai.audio.speech.create({
-    model: 'gpt-4o-mini-tts',
-    voice: voice ?? 'aura-asteria-en',
-    input: text ?? ''
-  });
+  try {
+    const { text, voice } = await req.json();
 
-  const audioBuffer = Buffer.from(await speech.arrayBuffer());
-  const fileName = `speech-${Date.now()}.mp3`;
+    if (!text) {
+      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+    }
 
-  await supabaseServer.storage.from('voice_samples').upload(fileName, audioBuffer, {
-    contentType: 'audio/mpeg',
-    upsert: true
-  });
+    const result = await generateSpeech({
+      text,
+      voice: voice ?? 'aura-asteria-en',
+    });
 
-  const { data: publicUrl } = supabaseServer.storage.from('voice_samples').getPublicUrl(fileName);
-
-  return NextResponse.json({ url: publicUrl.publicUrl });
+    return NextResponse.json({ url: result.url });
+  } catch (error) {
+    console.error('Error generating speech:', error);
+    return NextResponse.json({ error: 'Failed to generate speech' }, { status: 500 });
+  }
 }

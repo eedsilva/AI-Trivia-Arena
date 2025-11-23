@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
-import { updateUserSettings } from '../../../lib/supabaseClient';
+import { updateUserSettings } from '../../../lib/supabase/helpers';
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { user_id, difficulty, tts_enabled, tts_voice } = body;
+  try {
+    const body = await req.json();
+    const { user_id, difficulty, tts_enabled, tts_voice } = body;
 
-  const settings = await updateUserSettings({
-    user_id,
-    difficulty,
-    tts_enabled,
-    tts_voice
-  });
+    console.log('💾 Updating user settings:', { user_id, difficulty, tts_enabled, tts_voice });
 
-  return NextResponse.json(settings);
+    if (!user_id) {
+      return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+    }
+
+    const settings = await updateUserSettings({
+      user_id,
+      difficulty,
+      tts_enabled,
+      tts_voice,
+    });
+
+    console.log('✅ Settings updated successfully:', settings);
+
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error('❌ Error updating user settings:', error);
+    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+  }
 }
