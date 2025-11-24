@@ -28,21 +28,26 @@ export const generateTriviaQuestion = async (
     const openrouter = getOpenRouterClient();
     const model = envConfig.openrouter.model || 'openai/gpt-4o-mini';
 
+    // Add timestamp and random seed to prompt to encourage unique questions
+    const timestamp = Date.now();
+    const randomSeed = Math.floor(Math.random() * 1000000);
+
     const response = await openrouter.chat.send({
       messages: [
         {
           role: 'system',
           content:
-            'Generate a multiple choice trivia question with 4-5 plausible options. Return JSON with question, options array (4-5 items), correct_answer_index (0-based), and explanation (2-3 sentence concise rationale for the correct answer). Make all options plausible to increase difficulty.',
+            'Generate a unique multiple choice trivia question with 4-5 plausible options. Return JSON with question, options array (4-5 items), correct_answer_index (0-based), and explanation (2-3 sentence concise rationale for the correct answer). Make all options plausible to increase difficulty. IMPORTANT: Generate a completely unique question that has not been asked before. Vary the topic, wording, and subject matter.',
         },
         {
           role: 'user',
-          content: `Difficulty: ${difficultyLabel}`,
+          content: `Difficulty: ${difficultyLabel}. Generate a unique question (seed: ${randomSeed}, time: ${timestamp}). Ensure the question text is completely different from any previous questions.`,
         },
       ],
       model: model,
       responseFormat: { type: 'json_object' },
       stream: false,
+      temperature: 0.9, // Higher temperature for more variety
     });
 
     const content = response.choices[0]?.message?.content;

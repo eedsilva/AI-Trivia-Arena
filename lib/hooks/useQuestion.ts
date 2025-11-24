@@ -10,9 +10,8 @@ import { queryKeys } from './queryKeys';
  * Features:
  * - Proper loading states and error handling
  * - Fallback questions on API failure
- * - Infinite stale time (questions are unique)
- * - Mutation for fetching new questions
  * - Prevents duplicate questions via excludeQuestionIds
+ * - Always generates fresh questions (no caching)
  *
  * @param difficulty - Difficulty level (easy, medium, hard)
  * @param options - Optional configuration
@@ -41,17 +40,25 @@ export function useQuestion(
     queryKey: queryKeys.question(difficulty),
     queryFn: () => fetchQuestion({ difficulty, excludeQuestionIds }),
     enabled,
-    staleTime: Infinity, // Questions are unique, don't refetch
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 0, // Always consider stale to ensure fresh questions on refetch
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (short to prevent stale data)
     retry: 2,
   });
 
   // Mutation for fetching a new question
   const fetchNewQuestion = useMutation({
-    mutationFn: (opts?: FetchQuestionOptions) =>
-      fetchQuestion({ difficulty, excludeQuestionIds, ...opts }),
+    mutationFn: (opts?: FetchQuestionOptions) => {
+      // Always pass excludeQuestionIds to ensure uniqueness
+      const finalExcludeIds = opts?.excludeQuestionIds || excludeQuestionIds;
+      return fetchQuestion({ 
+        difficulty: opts?.difficulty || difficulty, 
+        excludeQuestionIds: finalExcludeIds,
+        ...opts 
+      });
+    },
     onSuccess: (newQuestion) => {
-      // Invalidate old question and set new one
+      // Remove old question from cache and set new one
+      // Using the same query key so the query can read it
       queryClient.setQueryData(queryKeys.question(difficulty), newQuestion);
     },
   });

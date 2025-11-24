@@ -397,16 +397,21 @@ export default function GamePage() {
     setQuestionInStore(FALLBACK_QUESTION);
 
     try {
-      // Fetch new question
-      const newQuestion = await fetchNewQuestion({ difficulty });
+      // Fetch new question with exclusion list to prevent duplicates
+      const newQuestion = await fetchNewQuestion({ 
+        difficulty,
+        excludeQuestionIds: askedQuestionIds 
+      });
       if (newQuestion) {
         setQuestionInStore(newQuestion);
+        // Track this question as asked to prevent repeats
+        addAskedQuestion(newQuestion.id);
         // Voice will be played automatically by the useEffect watching fetchedQuestion
       }
     } catch (error) {
       console.error('Failed to load next question:', error);
     }
-  }, [fetchNewQuestion, setQuestionInStore, difficulty]);
+  }, [fetchNewQuestion, setQuestionInStore, difficulty, askedQuestionIds, addAskedQuestion]);
 
   // Store handleReveal in a ref to avoid timer restarts
   const handleRevealRef = useRef(handleReveal);
